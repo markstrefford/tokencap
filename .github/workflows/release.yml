@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: TokenCap
+  BUNDLE_ID: com.helsky-labs.tokencap
+  SIGNING_IDENTITY: "Developer ID Application: HELANIO DE TAROR (WFLS6PH8YU)"
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Build universal binary
+        run: swift build -c release --arch arm64 --arch x86_64
+
+      - name: Create .app bundle
+        run: |
+          APP_DIR="release/${{ env.APP_NAME }}.app/Contents"
+          mkdir -p "$APP_DIR/MacOS"
+          mkdir -p "$APP_DIR/Resources"
+
+          cp .build/apple/Products/Release/${{ env.APP_NAME }} "$APP_DIR/MacOS/${{ env.APP_NAME }}"
+          cp Info.plist "$APP_DIR/Info.plist"
+
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ env.VERSION }}" "$APP_DIR/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ env.VERSION }}" "$APP_DIR/Info.plist"
+
+          # Copy app icon if it exists
+          if [ -f Resources/AppIcon.icns ]; then
+            cp Resources/AppIcon.icns "$APP_DIR/Resources/AppIcon.icns"
+          fi
+
+      - name: Import certificate
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$CSC_LINK" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$CSC_KEY_PASSWORD" \
+            -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/certificate.p12"
+
+          security list-keychains -d user -s "$KEYCHAIN_PATH" "$(security default-keychain -d user | tr -d '"' | xargs)"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+      - name: Code sign app
+        run: |
+          codesign --force --options runtime \
+            --entitlements Resources/TokenCap.entitlements \
+            --sign "${{ env.SIGNING_IDENTITY }}" \
+            "release/${{ env.APP_NAME }}.app"
+
+      - name: Verify signature
+        run: |
+          codesign --verify --deep --strict "release/${{ env.APP_NAME }}.app"
+          echo "Signature valid"
+
+      - name: Notarize app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          ditto -c -k --keepParent "release/${{ env.APP_NAME }}.app" "$RUNNER_TEMP/notarize.zip"
+
+          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          xcrun stapler staple "release/${{ env.APP_NAME }}.app"
+
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+
+          create-dmg \
+            --volname "${{ env.APP_NAME }}" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "${{ env.APP_NAME }}.app" 175 190 \
+            --hide-extension "${{ env.APP_NAME }}.app" \
+            --app-drop-link 425 190 \
+            --no-internet-enable \
+            "release/${{ env.APP_NAME }}-${{ github.ref_name }}.dmg" \
+            "release/${{ env.APP_NAME }}.app"
+
+      - name: Notarize DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit "release/${{ env.APP_NAME }}-${{ github.ref_name }}.dmg" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          xcrun stapler staple "release/${{ env.APP_NAME }}-${{ github.ref_name }}.dmg"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/${{ env.APP_NAME }}-${{ github.ref_name }}.dmg
+          generate_release_notes: true
+          draft: false
