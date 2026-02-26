@@ -63,6 +63,23 @@ struct UsageBucket: Codable {
     var utilizationColor: UsageLevel {
         UsageLevel.from(utilization)
     }
+
+    var resetTimeRemaining: String? {
+        guard let date = resetDate else { return nil }
+        let interval = date.timeIntervalSinceNow
+        guard interval > 0 else { return nil }
+
+        let hours = Int(interval) / 3600
+        let minutes = (Int(interval) % 3600) / 60
+
+        if hours >= 24 {
+            return "\(hours / 24)d \(hours % 24)h"
+        } else if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
 }
 
 struct ExtraUsage: Codable {
@@ -87,7 +104,7 @@ enum UsageLevel {
     case high     // > 80% red
 
     static func from(_ utilization: Double) -> UsageLevel {
-        if utilization > 80 {
+        if utilization >= 80 {
             return .high
         } else if utilization >= 50 {
             return .medium

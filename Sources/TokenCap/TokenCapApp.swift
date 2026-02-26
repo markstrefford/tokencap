@@ -4,10 +4,12 @@ import SwiftUI
 struct TokenCapApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var usageService = UsageService()
+    @StateObject private var settings = SettingsManager.shared
+    @StateObject private var notifications = NotificationService()
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarView(service: usageService)
+            MenuBarView(service: usageService, settings: settings)
         } label: {
             menuBarLabel
         }
@@ -23,7 +25,16 @@ struct TokenCapApp: App {
                 .font(.caption.monospacedDigit())
         }
         .onAppear {
-            usageService.startPolling(interval: 60)
+            notifications.requestPermission()
+            usageService.startPolling(interval: settings.pollInterval)
+        }
+        .onChange(of: settings.pollInterval) { _, newInterval in
+            usageService.startPolling(interval: newInterval)
+        }
+        .onChange(of: usageService.lastUpdated) { _, _ in
+            if let usage = usageService.usage {
+                notifications.checkThresholds(usage: usage, settings: settings)
+            }
         }
     }
 
@@ -50,7 +61,6 @@ struct TokenCapApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Hide dock icon - this is a menu bar only app
         NSApp.setActivationPolicy(.accessory)
     }
 }
