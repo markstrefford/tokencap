@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TokenCap — Brand Review</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f7;
+    color: #1d1d1f;
+    padding: 40px;
+  }
+  h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+  .subtitle { color: #86868b; font-size: 16px; margin-bottom: 40px; }
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #d97b3f;
+    display: inline-block;
+  }
+  .section { margin-bottom: 60px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 3px solid transparent;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    position: relative;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+  .card.selected { border-color: #d97b3f; background: #fff8f3; }
+  .card .number {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #e5e5ea;
+    color: #636366;
+    font-size: 12px;
+    font-weight: 700;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card.selected .number { background: #d97b3f; color: white; }
+  .card img, .card object {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+  .icon-preview {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+  }
+  .icon-preview .mini {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: #f5f5f7;
+    padding: 4px;
+  }
+  .icon-preview .mini img { width: 100%; height: 100%; }
+  .icon-preview .micro {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    background: #f5f5f7;
+    padding: 2px;
+  }
+  .icon-preview .micro img { width: 100%; height: 100%; }
+  .dark-preview {
+    background: #1d1d1f;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 12px;
+  }
+  .dark-preview img { filter: brightness(0) invert(1); opacity: 0.9; }
+  .selection-summary {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e5e5ea;
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 100;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+  }
+  .selection-summary .label { font-weight: 600; color: #86868b; font-size: 14px; }
+  .selection-summary .pick { font-weight: 700; color: #d97b3f; font-size: 16px; }
+  .selection-summary .pick.empty { color: #c7c7cc; }
+  .wordmark-card img {
+    aspect-ratio: auto;
+    height: 80px;
+    width: 100%;
+    object-fit: contain;
+  }
+</style>
+</head>
+<body>
+  <h1>TokenCap</h1>
+  <p class="subtitle">Brand asset review — click to select your favorites</p>
+
+  <div class="section">
+    <h2>Icon Variations</h2>
+    <div class="grid" id="icons">
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Wordmark Variations</h2>
+    <div class="grid" id="wordmarks">
+    </div>
+  </div>
+
+  <div class="selection-summary">
+    <span class="label">Selected:</span>
+    <span>Icon: <span class="pick empty" id="pick-icon">none</span></span>
+    <span>Wordmark: <span class="pick empty" id="pick-wordmark">none</span></span>
+  </div>
+
+  <div style="height: 80px;"></div>
+
+  <script>
+    const iconCount = 6;
+    const wordmarkCount = 6;
+    let selectedIcon = null;
+    let selectedWordmark = null;
+
+    function createCard(type, num) {
+      const card = document.createElement('div');
+      card.className = type === 'wordmark' ? 'card wordmark-card' : 'card';
+      card.innerHTML = `
+        <div class="number">${num}</div>
+        <img src="${type === 'wordmark' ? 'wordmark' : 'logo-icon'}/${String(num).padStart(2, '0')}.svg" alt="${type} ${num}">
+        ${type === 'icon' ? `
+        <div class="icon-preview">
+          <div class="mini"><img src="logo-icon/${String(num).padStart(2, '0')}.svg"></div>
+          <div class="micro"><img src="logo-icon/${String(num).padStart(2, '0')}.svg"></div>
+          <span style="color:#86868b;font-size:11px;align-self:center;margin-left:4px">32px / 16px preview</span>
+        </div>` : ''}
+      `;
+      card.addEventListener('click', () => {
+        if (type === 'icon') {
+          document.querySelectorAll('#icons .card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedIcon = num;
+          const el = document.getElementById('pick-icon');
+          el.textContent = `#${num}`;
+          el.classList.remove('empty');
+        } else {
+          document.querySelectorAll('#wordmarks .card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedWordmark = num;
+          const el = document.getElementById('pick-wordmark');
+          el.textContent = `#${num}`;
+          el.classList.remove('empty');
+        }
+      });
+      return card;
+    }
+
+    const iconsGrid = document.getElementById('icons');
+    for (let i = 1; i <= iconCount; i++) {
+      iconsGrid.appendChild(createCard('icon', i));
+    }
+
+    const wordmarksGrid = document.getElementById('wordmarks');
+    for (let i = 1; i <= wordmarkCount; i++) {
+      wordmarksGrid.appendChild(createCard('wordmark', i));
+    }
+  </script>
+</body>
+</html>

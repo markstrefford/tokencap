@@ -10,3 +10,7 @@ DerivedData/
 *.dmg
 release/
 dist/
+
+# Branding
+branding/recraft-output/*-response.json
+branding/ui-mockup/helsky-mark.png

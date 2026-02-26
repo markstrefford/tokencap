@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TokenCap — Final Brand Assets</title>
+<script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f7;
+    color: #1d1d1f;
+    padding: 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 36px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #86868b; font-size: 16px; margin-bottom: 8px; }
+  .color-swatch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    margin-bottom: 40px;
+    font-size: 13px;
+    font-family: 'SF Mono', monospace;
+  }
+  .swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    margin-top: 48px;
+  }
+  .variant-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #86868b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .card {
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .card.light-bg { background: white; border: 1px solid #e5e5ea; }
+  .card.dark-bg { background: #1a1a2e; border: 1px solid #2a2a4e; }
+  .card.checker-bg {
+    background-image: linear-gradient(45deg, #e5e5ea 25%, transparent 25%),
+      linear-gradient(-45deg, #e5e5ea 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #e5e5ea 75%),
+      linear-gradient(-45deg, transparent 75%, #e5e5ea 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    border: 1px solid #e5e5ea;
+  }
+  .card img {
+    width: 100%;
+    max-width: 180px;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+  .card.wordmark img {
+    aspect-ratio: auto;
+    height: 60px;
+    max-width: 100%;
+  }
+  .card .label {
+    font-size: 11px;
+    color: #86868b;
+    text-align: center;
+  }
+  .card.dark-bg .label { color: #8e8ea0; }
+  .size-test {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid #e5e5ea;
+    margin-bottom: 32px;
+  }
+  .size-test .size-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .size-test .size-item img {
+    object-fit: contain;
+  }
+  .size-test .size-item span {
+    font-size: 10px;
+    color: #86868b;
+  }
+</style>
+</head>
+<body>
+  <h1>TokenCap</h1>
+  <p class="subtitle">Final brand assets — 12 SVG variants</p>
+  <div class="color-swatch">
+    <span class="swatch" style="background: rgb(217,123,63);"></span>
+    Brand: #D97B3F / rgb(217,123,63)
+  </div>
+
+  <h2>Icon</h2>
+  <div class="grid">
+    <div class="card light-bg">
+      <img src="icon/tokencap-icon-color.svg">
+      <span class="label">Color</span>
+    </div>
+    <div class="card checker-bg">
+      <img src="icon/tokencap-icon-color-transparent.svg">
+      <span class="label">Color Transparent</span>
+    </div>
+    <div class="card light-bg">
+      <img src="icon/tokencap-icon-black.svg">
+      <span class="label">Black</span>
+    </div>
+    <div class="card checker-bg">
+      <img src="icon/tokencap-icon-black-transparent.svg">
+      <span class="label">Black Transparent</span>
+    </div>
+    <div class="card dark-bg">
+      <img src="icon/tokencap-icon-white-on-dark.svg">
+      <span class="label">White on Dark</span>
+    </div>
+    <div class="card dark-bg">
+      <img src="icon/tokencap-icon-white-transparent.svg">
+      <span class="label">White Transparent</span>
+    </div>
+  </div>
+
+  <p class="variant-label">Size test</p>
+  <div class="size-test">
+    <div class="size-item"><img src="icon/tokencap-icon-color.svg" width="128" height="128"><span>128px</span></div>
+    <div class="size-item"><img src="icon/tokencap-icon-color.svg" width="64" height="64"><span>64px</span></div>
+    <div class="size-item"><img src="icon/tokencap-icon-color.svg" width="32" height="32"><span>32px</span></div>
+    <div class="size-item"><img src="icon/tokencap-icon-color.svg" width="16" height="16"><span>16px</span></div>
+  </div>
+
+  <h2>Wordmark</h2>
+  <div class="grid">
+    <div class="card light-bg wordmark">
+      <img src="wordmark/tokencap-wordmark-color.svg">
+      <span class="label">Color</span>
+    </div>
+    <div class="card checker-bg wordmark">
+      <img src="wordmark/tokencap-wordmark-color-transparent.svg">
+      <span class="label">Color Transparent</span>
+    </div>
+    <div class="card light-bg wordmark">
+      <img src="wordmark/tokencap-wordmark-black.svg">
+      <span class="label">Black</span>
+    </div>
+    <div class="card checker-bg wordmark">
+      <img src="wordmark/tokencap-wordmark-black-transparent.svg">
+      <span class="label">Black Transparent</span>
+    </div>
+    <div class="card dark-bg wordmark">
+      <img src="wordmark/tokencap-wordmark-white-on-dark.svg">
+      <span class="label">White on Dark</span>
+    </div>
+    <div class="card dark-bg wordmark">
+      <img src="wordmark/tokencap-wordmark-white-transparent.svg">
+      <span class="label">White Transparent</span>
+    </div>
+  </div>
+</body>
+</html>
