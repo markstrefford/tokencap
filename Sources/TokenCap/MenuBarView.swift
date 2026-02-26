@@ -263,7 +263,7 @@ struct MenuBarView: View {
                     Text("TokenCap")
                         .font(.system(size: 15, weight: .bold))
 
-                    Text("Version 1.0.0")
+                    Text("Version 1.0.1")
                         .font(.system(size: 12))
                         .foregroundStyle(.tertiary)
                 }
