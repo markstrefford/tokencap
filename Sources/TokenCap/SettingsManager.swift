@@ -26,6 +26,10 @@ final class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(Array(enabledThresholds), forKey: "enabledThresholds") }
     }
 
+    @Published var analyticsEnabled: Bool {
+        didSet { UserDefaults.standard.set(analyticsEnabled, forKey: "analyticsEnabled") }
+    }
+
     private init() {
         let defaults = UserDefaults.standard
         defaults.register(defaults: [
@@ -33,11 +37,14 @@ final class SettingsManager: ObservableObject {
             "pollInterval": 60.0,
             "notificationsEnabled": true,
             "enabledThresholds": [50, 75, 80, 90],
+            "analyticsEnabled": true,
         ])
 
         self.launchAtLogin = defaults.bool(forKey: "launchAtLogin")
         self.pollInterval = defaults.double(forKey: "pollInterval")
         self.notificationsEnabled = defaults.bool(forKey: "notificationsEnabled")
+
+        self.analyticsEnabled = defaults.bool(forKey: "analyticsEnabled")
 
         if let saved = defaults.array(forKey: "enabledThresholds") as? [Int] {
             self.enabledThresholds = Set(saved)

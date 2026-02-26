@@ -98,10 +98,18 @@ struct ExtraUsage: Codable {
 
 // MARK: - Usage Level (color coding)
 
-enum UsageLevel {
+enum UsageLevel: Equatable, CustomStringConvertible {
     case low      // < 50% green
     case medium   // 50-80% yellow
     case high     // > 80% red
+
+    var description: String {
+        switch self {
+        case .low: return "low"
+        case .medium: return "medium"
+        case .high: return "high"
+        }
+    }
 
     static func from(_ utilization: Double) -> UsageLevel {
         if utilization >= 80 {

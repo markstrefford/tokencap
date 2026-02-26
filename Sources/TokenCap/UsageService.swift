@@ -11,6 +11,7 @@ final class UsageService: ObservableObject {
     private let credentialsPath: String
     private let apiURL = URL(string: "https://api.anthropic.com/api/oauth/usage")!
     private var pollTimer: Timer?
+    private var lastTrackedLevel: UsageLevel?
 
     init() {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
@@ -69,10 +70,23 @@ final class UsageService: ObservableObject {
             self.lastUpdated = Date()
             self.error = nil
 
+            let currentLevel = sessionUsageLevel
+            if currentLevel != lastTrackedLevel {
+                AnalyticsService.shared.track("usage_level_changed", data: [
+                    "level": currentLevel.description,
+                    "utilization": "\(Int(sessionUtilization))",
+                ])
+                lastTrackedLevel = currentLevel
+            }
+
         } catch let error as UsageError {
             self.error = error
+            AnalyticsService.shared.track("usage_error", data: [
+                "type": error.analyticsLabel,
+            ])
         } catch {
             self.error = .unexpected(error.localizedDescription)
+            AnalyticsService.shared.track("usage_error", data: ["type": "unexpected"])
         }
     }
 
@@ -131,6 +145,16 @@ enum UsageError: LocalizedError {
         switch self {
         case .credentialsNotFound, .tokenExpired: return true
         default: return false
+        }
+    }
+
+    var analyticsLabel: String {
+        switch self {
+        case .credentialsNotFound: return "credentials_not_found"
+        case .tokenExpired: return "token_expired"
+        case .invalidResponse: return "invalid_response"
+        case .httpError(let code, _): return "http_\(code)"
+        case .unexpected: return "unexpected"
         }
     }
 
