@@ -178,3 +178,13 @@ jobs:
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/helsky-labs/homebrew-tap/contents/Casks/tokencap.rb" \
             -d "{\"message\":\"chore: bump tokencap to ${{ env.VERSION }}\",\"content\":\"$ENCODED\",\"sha\":\"$FILE_SHA\"}"
+
+      - name: Trigger site update
+        env:
+          TAP_TOKEN: ${{ secrets.SITE_UPDATE_PAT }}
+        run: |
+          curl -s -X POST \
+            -H "Authorization: token $TAP_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/helsky-labs/tokencap/actions/workflows/update-site.yml/dispatches" \
+            -d "{\"ref\":\"main\",\"inputs\":{\"tag\":\"${{ github.ref_name }}\"}}"
