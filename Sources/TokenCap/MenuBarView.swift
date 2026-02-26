@@ -111,75 +111,65 @@ struct MenuBarView: View {
         .padding(.top, 12)
     }
 
-    // MARK: - Usage Tab (merged session + weekly)
+    // MARK: - Usage Tab
 
     private var usageTab: some View {
         VStack(spacing: 0) {
-            // Session hero gauge
-            if let usage = service.usage, let fiveHour = usage.fiveHour {
-                heroGauge(bucket: fiveHour)
+            if let usage = service.usage {
+                VStack(alignment: .leading, spacing: 8) {
+                    // Session
+                    if let fiveHour = usage.fiveHour {
+                        sectionTitle("SESSION")
+                        gaugeRow(label: "5-Hour Window", bucket: fiveHour)
+                    }
+
+                    // Weekly
+                    let hasWeekly = usage.sevenDay != nil || usage.sevenDaySonnet != nil
+                        || usage.sevenDayOpus != nil || usage.sevenDayOauthApps != nil
+                        || usage.sevenDayCowork != nil
+
+                    if hasWeekly {
+                        sectionTitle("WEEKLY")
+                            .padding(.top, 4)
+
+                        if let sevenDay = usage.sevenDay {
+                            gaugeRow(label: "All Models", bucket: sevenDay)
+                        }
+                        if let sonnet = usage.sevenDaySonnet {
+                            gaugeRow(label: "Sonnet", bucket: sonnet)
+                        }
+                        if let opus = usage.sevenDayOpus {
+                            gaugeRow(label: "Opus", bucket: opus)
+                        }
+                        if let oauth = usage.sevenDayOauthApps {
+                            gaugeRow(label: "OAuth Apps", bucket: oauth)
+                        }
+                        if let cowork = usage.sevenDayCowork {
+                            gaugeRow(label: "Cowork", bucket: cowork)
+                        }
+                    }
+
+                    // Extra usage (bottom)
+                    if let extra = usage.extraUsage, extra.isEnabled {
+                        extraUsageCard(extra)
+                            .padding(.top, 4)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
 
                 if let error = service.error {
                     errorCard(error)
                         .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
-                }
-
-                if let extra = usage.extraUsage, extra.isEnabled {
-                    extraUsageCard(extra)
-                        .padding(.horizontal, 16)
                         .padding(.bottom, 12)
                 }
-
-                // Weekly breakdown
-                weeklySection(usage)
             } else if let error = service.error {
-                errorGaugeSection
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
                 errorCard(error)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
+                    .padding(16)
             } else {
-                heroGaugePlaceholder
+                ProgressView()
+                    .padding(.vertical, 32)
             }
-        }
-    }
-
-    // MARK: - Weekly Section
-
-    @ViewBuilder
-    private func weeklySection(_ usage: UsageResponse) -> some View {
-        let hasWeekly = usage.sevenDay != nil || usage.sevenDaySonnet != nil
-            || usage.sevenDayOpus != nil || usage.sevenDayOauthApps != nil
-            || usage.sevenDayCowork != nil
-
-        if hasWeekly {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("WEEKLY")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.tertiary)
-                    .tracking(0.5)
-
-                if let sevenDay = usage.sevenDay {
-                    gaugeRow(label: "All Models", bucket: sevenDay)
-                }
-                if let sonnet = usage.sevenDaySonnet {
-                    gaugeRow(label: "Sonnet", bucket: sonnet)
-                }
-                if let opus = usage.sevenDayOpus {
-                    gaugeRow(label: "Opus", bucket: opus)
-                }
-                if let oauth = usage.sevenDayOauthApps {
-                    gaugeRow(label: "OAuth Apps", bucket: oauth)
-                }
-                if let cowork = usage.sevenDayCowork {
-                    gaugeRow(label: "Cowork", bucket: cowork)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
         }
     }
 
@@ -271,103 +261,7 @@ struct MenuBarView: View {
         .padding(16)
     }
 
-    // MARK: - Hero Gauge
-
-    private func heroGauge(bucket: UsageBucket) -> some View {
-        let level = UsageLevel.from(bucket.utilization)
-        let color = Color.statusColor(for: level)
-        let fraction = min(bucket.utilization, 100) / 100
-
-        return VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .inset(by: 12)
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 8)
-
-                Circle()
-                    .inset(by: 12)
-                    .trim(from: 0, to: fraction)
-                    .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeInOut(duration: 0.6), value: bucket.utilization)
-
-                VStack(spacing: 0) {
-                    HStack(alignment: .firstTextBaseline, spacing: 0) {
-                        Text("\(Int(bucket.utilization))")
-                            .font(.system(size: 32, weight: .heavy))
-                            .monospacedDigit()
-                        Text("%")
-                            .font(.system(size: 16, weight: .semibold))
-                            .opacity(0.6)
-                    }
-                    .foregroundStyle(color)
-                }
-            }
-            .frame(width: 140, height: 140)
-
-            Text("5-Hour Window")
-                .font(.system(size: 14, weight: .semibold))
-
-            if let remaining = bucket.resetTimeRemaining {
-                if level == .high {
-                    Text("Resets in \(remaining) — slow down!")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.statusRed)
-                } else {
-                    Text("Resets in \(remaining)")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-        }
-        .padding(.top, 16)
-        .padding(.bottom, 12)
-    }
-
-    // MARK: - Error Gauge
-
-    private var errorGaugeSection: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .inset(by: 12)
-                    .stroke(Color.primary.opacity(0.1), style: StrokeStyle(lineWidth: 8, dash: [4, 8]))
-
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text("--")
-                        .font(.system(size: 32, weight: .heavy))
-                        .monospacedDigit()
-                    Text("%")
-                        .font(.system(size: 16, weight: .semibold))
-                        .opacity(0.6)
-                }
-                .foregroundStyle(.tertiary)
-            }
-            .frame(width: 140, height: 140)
-        }
-        .padding(.top, 16)
-    }
-
-    private var heroGaugePlaceholder: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .inset(by: 12)
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 8)
-
-                ProgressView()
-            }
-            .frame(width: 140, height: 140)
-
-            Text("Loading...")
-                .font(.system(size: 12))
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.top, 16)
-        .padding(.bottom, 12)
-    }
-
-    // MARK: - Mini Gauge Row
+    // MARK: - Gauge Row
 
     private func gaugeRow(label: String, bucket: UsageBucket) -> some View {
         let level = UsageLevel.from(bucket.utilization)
