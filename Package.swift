@@ -10,7 +10,8 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "TokenCap",
-            path: "Sources/TokenCap"
+            path: "Sources/TokenCap",
+            resources: [.process("Assets")]
         )
     ]
 )

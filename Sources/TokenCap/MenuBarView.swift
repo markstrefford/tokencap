@@ -60,9 +60,7 @@ struct MenuBarView: View {
                 .fill(Color.brand.opacity(0.15))
                 .frame(width: 30, height: 30)
                 .overlay(
-                    Image(systemName: "gauge.with.needle.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.brand)
+                    brandIcon(size: 18)
                 )
 
             Text("TokenCap")
@@ -242,9 +240,7 @@ struct MenuBarView: View {
                         .fill(Color.brand.opacity(0.15))
                         .frame(width: 48, height: 48)
                         .overlay(
-                            Image(systemName: "gauge.with.needle.fill")
-                                .font(.system(size: 22))
-                                .foregroundStyle(Color.brand)
+                            brandIcon(size: 30)
                         )
 
                     Text("TokenCap")
@@ -498,6 +494,22 @@ struct MenuBarView: View {
     }
 
     // MARK: - Helpers
+
+    private func brandIcon(size: CGFloat) -> some View {
+        Group {
+            if let url = Bundle.module.url(forResource: "tokencap-icon-128", withExtension: "png"),
+               let nsImage = NSImage(contentsOf: url) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: size, height: size)
+            } else {
+                Image(systemName: "gauge.with.needle.fill")
+                    .font(.system(size: size * 0.7))
+                    .foregroundStyle(Color.brand)
+            }
+        }
+    }
 
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
