@@ -150,24 +150,24 @@ jobs:
 
           # Generate updated formula
           FORMULA=$(cat <<'RUBY'
-cask "tokencap" do
-  version "VERSION_PLACEHOLDER"
-  sha256 "SHA_PLACEHOLDER"
+          cask "tokencap" do
+            version "VERSION_PLACEHOLDER"
+            sha256 "SHA_PLACEHOLDER"
 
-  url "https://github.com/helsky-labs/tokencap/releases/download/v#{version}/TokenCap-v#{version}.dmg"
-  name "TokenCap"
-  desc "macOS menu bar app for monitoring Claude Code token usage"
-  homepage "https://tokencap.app"
+            url "https://github.com/helsky-labs/tokencap/releases/download/v#{version}/TokenCap-v#{version}.dmg"
+            name "TokenCap"
+            desc "macOS menu bar app for monitoring Claude Code token usage"
+            homepage "https://tokencap.app"
 
-  depends_on macos: ">= :sonoma"
+            depends_on macos: ">= :sonoma"
 
-  app "TokenCap.app"
+            app "TokenCap.app"
 
-  zap trash: [
-    "~/Library/Preferences/com.helsky-labs.tokencap.plist",
-  ]
-end
-RUBY
+            zap trash: [
+              "~/Library/Preferences/com.helsky-labs.tokencap.plist",
+            ]
+          end
+          RUBY
           )
           FORMULA="${FORMULA//VERSION_PLACEHOLDER/${{ env.VERSION }}}"
           FORMULA="${FORMULA//SHA_PLACEHOLDER/$SHA256}"
