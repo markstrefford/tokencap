@@ -436,57 +436,57 @@ struct MenuBarView: View {
     // MARK: - Footer
 
     private var footerSection: some View {
-        HStack {
+        HStack(spacing: 8) {
             if service.error != nil && service.usage == nil {
                 Text("Disconnected")
                     .font(.system(size: 11))
                     .foregroundStyle(Color.statusRed)
+                    .lineLimit(1)
             } else if let lastUpdated = service.lastUpdated {
                 Text("Updated \(lastUpdated.formatted(.relative(presentation: .named)))")
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
+                    .lineLimit(1)
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
-            HStack(spacing: 10) {
-                HStack(spacing: 5) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.primary.opacity(0.06))
-                        .frame(width: 14, height: 14)
-                        .overlay(
-                            Text("HY")
-                                .font(.system(size: 6, weight: .bold))
-                                .foregroundStyle(.secondary)
-                        )
+            Button {
+                NSWorkspace.shared.open(URL(string: "https://helsky-labs.com/")!)
+            } label: {
+                HStack(spacing: 4) {
+                    hyMark(size: 14)
                     Text("by Helsky Labs")
                         .font(.system(size: 10))
                         .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
+            }
+            .buttonStyle(.plain)
 
-                HStack(spacing: 2) {
-                    if selectedTab != .settings {
-                        Button {
-                            Task { await service.fetchUsage() }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                                .padding(4)
-                        }
-                        .buttonStyle(.plain)
-                    }
-
+            HStack(spacing: 2) {
+                if selectedTab != .settings {
                     Button {
-                        NSApplication.shared.terminate(nil)
+                        Task { await service.fetchUsage() }
                     } label: {
-                        Image(systemName: "xmark")
+                        Image(systemName: "arrow.clockwise")
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                             .padding(4)
                     }
                     .buttonStyle(.plain)
                 }
+
+                Button {
+                    NSApplication.shared.terminate(nil)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .padding(4)
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 16)
@@ -494,6 +494,25 @@ struct MenuBarView: View {
     }
 
     // MARK: - Helpers
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private func hyMark(size: CGFloat) -> some View {
+        Group {
+            let variant = colorScheme == .dark ? "hy-mark-white-56" : "hy-mark-dark-56"
+            if let url = Bundle.module.url(forResource: variant, withExtension: "png"),
+               let nsImage = NSImage(contentsOf: url) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: size, height: size)
+            } else {
+                Text("HY")
+                    .font(.system(size: size * 0.4, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
 
     private func brandIcon(size: CGFloat) -> some View {
         Group {
