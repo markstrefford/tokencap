@@ -53,11 +53,6 @@ final class NotificationService: ObservableObject {
             fireNotification(key: key, label: label, threshold: threshold,
                              utilization: utilization, bucket: bucket)
             firedThresholds[key, default: []].insert(threshold)
-            AnalyticsService.shared.track("threshold_alert", data: [
-                "bucket": key,
-                "threshold": "\(threshold)",
-                "utilization": "\(Int(utilization))",
-            ])
         }
 
         // Reset tracking when utilization drops (window reset)

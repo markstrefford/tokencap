@@ -102,7 +102,6 @@ struct MenuBarView: View {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             selectedTab = tab
                         }
-                        AnalyticsService.shared.track("tab_changed", data: ["tab": tab.rawValue])
                     }
             }
         }
@@ -206,22 +205,6 @@ struct MenuBarView: View {
                         .frame(width: 70)
                     }
 
-                    Divider()
-
-                    settingRow {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Anonymous analytics")
-                                .font(.system(size: 13))
-                            Text("Help improve TokenCap")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.tertiary)
-                        }
-                    } control: {
-                        Toggle("", isOn: $settings.analyticsEnabled)
-                            .toggleStyle(.switch)
-                            .controlSize(.mini)
-                            .tint(.brand)
-                    }
                 }
             }
 
@@ -467,7 +450,6 @@ struct MenuBarView: View {
 
     private var checkForUpdatesButton: some View {
         Button {
-            AnalyticsService.shared.track("manual_update_check")
             Task { await updateService.checkForUpdates() }
         } label: {
             HStack(spacing: 6) {
@@ -593,7 +575,6 @@ struct MenuBarView: View {
             HStack(spacing: 2) {
                 Button {
                     Task { await service.fetchUsage() }
-                    AnalyticsService.shared.track("manual_refresh")
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 11))
@@ -700,7 +681,6 @@ struct MenuBarView: View {
     }
 
     private func openTerminalWithClaude() {
-        AnalyticsService.shared.track("open_terminal")
         let script = """
         tell application "Terminal"
             activate

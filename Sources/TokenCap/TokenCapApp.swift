@@ -35,9 +35,6 @@ struct TokenCapApp: App {
             notifications.requestPermission()
             usageService.startPolling(interval: settings.pollInterval)
             Task { await updateService.checkIfNeeded() }
-            AnalyticsService.shared.track("app_launched", data: [
-                "version": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown",
-            ])
         }
         .onChange(of: settings.pollInterval) { _, newInterval in
             usageService.startPolling(interval: newInterval)

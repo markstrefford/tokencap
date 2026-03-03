@@ -36,8 +36,6 @@ final class UpdateService: ObservableObject {
         isChecking = true
         defer { isChecking = false }
 
-        AnalyticsService.shared.track("update_check", data: ["version": currentVersion])
-
         do {
             var request = URLRequest(url: apiURL)
             request.setValue("TokenCap/\(currentVersion)", forHTTPHeaderField: "User-Agent")
@@ -62,10 +60,6 @@ final class UpdateService: ObservableObject {
                     .first { $0.browserDownloadURL.hasSuffix(".dmg") }
                     .flatMap { URL(string: $0.browserDownloadURL) }
                 updateAvailable = true
-                AnalyticsService.shared.track("update_available", data: [
-                    "current": currentVersion,
-                    "latest": tagVersion,
-                ])
             } else {
                 updateAvailable = false
             }
@@ -77,10 +71,6 @@ final class UpdateService: ObservableObject {
     /// Opens the download URL (DMG if available, otherwise release page).
     func openDownload() {
         guard let url = downloadURL ?? releaseURL else { return }
-        AnalyticsService.shared.track("update_download_clicked", data: [
-            "version": latestVersion,
-            "url_type": downloadURL != nil ? "dmg" : "release_page",
-        ])
         NSWorkspace.shared.open(url)
     }
 
