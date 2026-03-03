@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Security
 
 @MainActor
 final class UsageService: ObservableObject {
@@ -20,6 +21,12 @@ final class UsageService: ObservableObject {
     // MARK: - Token Management
 
     func readAccessToken() throws -> String {
+        // Try macOS Keychain first (Claude Code v2.x+ stores credentials here)
+        if let token = try readAccessTokenFromKeychain() {
+            return token
+        }
+
+        // Fall back to file-based credentials
         let credentialsPath = settings.credentialsPath
         let url = URL(fileURLWithPath: credentialsPath)
         let claudeDir = (credentialsPath as NSString).deletingLastPathComponent
@@ -39,6 +46,33 @@ final class UsageService: ObservableObject {
             return credentials.claudeAiOauth.accessToken
         } catch is DecodingError {
             throw UsageError.unsupportedFormat
+        }
+    }
+
+    /// Reads OAuth credentials from the macOS Keychain where Claude Code v2.x+ stores them.
+    private func readAccessTokenFromKeychain() throws -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "Claude Code-credentials",
+            kSecReturnData as String: true,
+        ]
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status == errSecSuccess, let data = result as? Data else {
+            return nil
+        }
+
+        do {
+            let credentials = try JSONDecoder().decode(CredentialsFile.self, from: data)
+            if credentials.claudeAiOauth.isExpired {
+                throw UsageError.tokenExpired(credentials.claudeAiOauth.expirationDate)
+            }
+            return credentials.claudeAiOauth.accessToken
+        } catch is DecodingError {
+            // Keychain data doesn't match expected format — fall through to file-based
+            return nil
         }
     }
 
@@ -78,21 +112,13 @@ final class UsageService: ObservableObject {
 
             let currentLevel = sessionUsageLevel
             if currentLevel != lastTrackedLevel {
-                AnalyticsService.shared.track("usage_level_changed", data: [
-                    "level": currentLevel.description,
-                    "utilization": "\(Int(sessionUtilization))",
-                ])
                 lastTrackedLevel = currentLevel
             }
 
         } catch let error as UsageError {
             self.error = error
-            AnalyticsService.shared.track("usage_error", data: [
-                "type": error.analyticsLabel,
-            ])
         } catch {
             self.error = .unexpected(error.localizedDescription)
-            AnalyticsService.shared.track("usage_error", data: ["type": "unexpected"])
         }
     }
 
@@ -165,18 +191,6 @@ enum UsageError: LocalizedError {
         case .unsupportedFormat: return "doc.questionmark.fill"
         case .tokenExpired: return "clock.arrow.circlepath"
         default: return "exclamationmark.triangle.fill"
-        }
-    }
-
-    var analyticsLabel: String {
-        switch self {
-        case .claudeCodeNotInstalled: return "claude_not_installed"
-        case .oauthLoginRequired: return "oauth_login_required"
-        case .unsupportedFormat: return "unsupported_format"
-        case .tokenExpired: return "token_expired"
-        case .invalidResponse: return "invalid_response"
-        case .httpError(let code, _): return "http_\(code)"
-        case .unexpected: return "unexpected"
         }
     }
 
