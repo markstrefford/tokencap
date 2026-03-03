@@ -34,12 +34,17 @@ Download the latest `.dmg` from [GitHub Releases](https://github.com/helsky-labs
 
 ## How it works
 
-TokenCap reads your Claude Code OAuth token from `~/.claude/.credentials.json` and polls Anthropic's usage API every 60 seconds. No account creation, no cloud sync, no telemetry.
+TokenCap reads your Claude Code OAuth token and polls Anthropic's usage API every 60 seconds. No account creation, no cloud sync, no telemetry.
+
+**Credential lookup order:**
+
+1. **macOS Keychain** — Claude Code v2.x+ stores credentials in the macOS Keychain (service: `Claude Code-credentials`). TokenCap reads from here first.
+2. **File-based fallback** — `~/.claude/.credentials.json` or `~/.config/claude/.credentials.json` (used by older Claude Code versions and Linux).
 
 ## Privacy
 
-- Zero analytics or tracking in the app
-- Reads only your local credential file
+- Zero analytics or tracking
+- Reads only your local credentials (Keychain or file)
 - Makes HTTPS requests only to `api.anthropic.com`
 - Stores nothing to disk
 - Fully open source — read every line
@@ -47,7 +52,7 @@ TokenCap reads your Claude Code OAuth token from `~/.claude/.credentials.json` a
 ## Build from source
 
 ```bash
-git clone https://github.com/helsky-labs/tokencap.git
+git clone https://github.com/markstrefford/tokencap.git
 cd tokencap
 swift build -c release
 # Binary at .build/release/TokenCap
