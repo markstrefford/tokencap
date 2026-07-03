@@ -32,6 +32,7 @@ struct UsageResponse: Codable {
     let sevenDayOauthApps: UsageBucket?
     let sevenDayCowork: UsageBucket?
     let extraUsage: ExtraUsage?
+    let limits: [UsageLimit]?
 
     enum CodingKeys: String, CodingKey {
         case fiveHour = "five_hour"
@@ -41,6 +42,74 @@ struct UsageResponse: Codable {
         case sevenDayOauthApps = "seven_day_oauth_apps"
         case sevenDayCowork = "seven_day_cowork"
         case extraUsage = "extra_usage"
+        case limits
+    }
+
+    /// Per-model weekly breakdown. The API moved this out of the top-level
+    /// `seven_day_*` fields (now null) into scoped entries in `limits`.
+    var scopedModelLimits: [UsageLimit] {
+        (limits ?? []).filter { $0.kind == "weekly_scoped" && $0.modelName != nil }
+    }
+}
+
+// MARK: - Usage Limit (structured breakdown)
+
+struct UsageLimit: Codable {
+    let kind: String
+    let group: String?
+    let percent: Double
+    let resetsAt: String?
+    let scope: LimitScope?
+
+    enum CodingKeys: String, CodingKey {
+        case kind, group, percent, scope
+        case resetsAt = "resets_at"
+    }
+
+    var modelName: String? {
+        scope?.model?.displayName
+    }
+
+    var rowID: String {
+        "\(kind)-\(modelName ?? group ?? "")"
+    }
+
+    private var resetDate: Date? {
+        guard let resetsAt else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: resetsAt)
+    }
+
+    var resetTimeRemaining: String? {
+        guard let date = resetDate else { return nil }
+        let interval = date.timeIntervalSinceNow
+        guard interval > 0 else { return nil }
+
+        let hours = Int(interval) / 3600
+        let minutes = (Int(interval) % 3600) / 60
+
+        if hours >= 24 {
+            return "\(hours / 24)d \(hours % 24)h"
+        } else if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+}
+
+struct LimitScope: Codable {
+    let model: LimitModel?
+}
+
+struct LimitModel: Codable {
+    let id: String?
+    let displayName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case displayName = "display_name"
     }
 }
 

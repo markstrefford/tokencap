@@ -26,11 +26,19 @@ enum MenuTab: String, CaseIterable {
 
 // MARK: - Main View
 
+private struct ContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 struct MenuBarView: View {
     @ObservedObject var service: UsageService
     @ObservedObject var settings: SettingsManager
     @ObservedObject var updateService: UpdateService
     @State private var selectedTab: MenuTab = .usage
+    @State private var contentHeight: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,14 +46,22 @@ struct MenuBarView: View {
             tabBar
 
             ScrollView {
-                switch selectedTab {
-                case .usage:
-                    usageTab
-                case .settings:
-                    settingsTab
+                Group {
+                    switch selectedTab {
+                    case .usage:
+                        usageTab
+                    case .settings:
+                        settingsTab
+                    }
                 }
+                .background(
+                    GeometryReader { geo in
+                        Color.clear.preference(key: ContentHeightKey.self, value: geo.size.height)
+                    }
+                )
             }
-            .frame(maxHeight: 600)
+            .frame(height: min(contentHeight, 600))
+            .onPreferenceChange(ContentHeightKey.self) { contentHeight = $0 }
 
             Divider()
             footerSection
@@ -122,9 +138,10 @@ struct MenuBarView: View {
                     }
 
                     // Weekly
+                    let modelLimits = usage.scopedModelLimits
                     let hasWeekly = usage.sevenDay != nil || usage.sevenDaySonnet != nil
                         || usage.sevenDayOpus != nil || usage.sevenDayOauthApps != nil
-                        || usage.sevenDayCowork != nil
+                        || usage.sevenDayCowork != nil || !modelLimits.isEmpty
 
                     if hasWeekly {
                         sectionTitle("WEEKLY")
@@ -144,6 +161,15 @@ struct MenuBarView: View {
                         }
                         if let cowork = usage.sevenDayCowork {
                             gaugeRow(label: "Cowork", bucket: cowork)
+                        }
+
+                        // Per-model breakdown (API moved this into `limits`)
+                        ForEach(modelLimits, id: \.rowID) { limit in
+                            gaugeRow(
+                                label: limit.modelName ?? "Model",
+                                utilization: limit.percent,
+                                resetTimeRemaining: limit.resetTimeRemaining
+                            )
                         }
                     }
 
@@ -311,9 +337,13 @@ struct MenuBarView: View {
     // MARK: - Gauge Row
 
     private func gaugeRow(label: String, bucket: UsageBucket) -> some View {
-        let level = UsageLevel.from(bucket.utilization)
+        gaugeRow(label: label, utilization: bucket.utilization, resetTimeRemaining: bucket.resetTimeRemaining)
+    }
+
+    private func gaugeRow(label: String, utilization: Double, resetTimeRemaining: String?) -> some View {
+        let level = UsageLevel.from(utilization)
         let color = Color.statusColor(for: level)
-        let fraction = min(bucket.utilization, 100) / 100
+        let fraction = min(utilization, 100) / 100
 
         return HStack(spacing: 12) {
             ZStack {
@@ -327,7 +357,7 @@ struct MenuBarView: View {
                     .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
 
-                Text("\(Int(bucket.utilization))")
+                Text("\(Int(utilization))")
                     .font(.system(size: 11, weight: .bold))
                     .monospacedDigit()
                     .foregroundStyle(color)
@@ -338,7 +368,7 @@ struct MenuBarView: View {
                 Text(label)
                     .font(.system(size: 13, weight: .semibold))
 
-                if let remaining = bucket.resetTimeRemaining {
+                if let remaining = resetTimeRemaining {
                     if level == .high {
                         Text("Resets in \(remaining)")
                             .font(.system(size: 11))
@@ -353,7 +383,7 @@ struct MenuBarView: View {
 
             Spacer()
 
-            Text("\(Int(bucket.utilization))%")
+            Text("\(Int(utilization))%")
                 .font(.system(size: 18, weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(color)

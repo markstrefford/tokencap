@@ -14,6 +14,17 @@ final class UsageService: ObservableObject {
     private var pollTimer: Timer?
     private var lastTrackedLevel: UsageLevel?
 
+    // Backoff state: when the API rate-limits us, keep polling at the fixed
+    // interval only makes the lockout worse. Grow the delay instead.
+    private var pollInterval: TimeInterval = 60
+    private var rateLimitBackoff: TimeInterval = 0
+    private let maxBackoff: TimeInterval = 600
+
+    var isRateLimited: Bool {
+        if case .rateLimited = error { return true }
+        return false
+    }
+
     init(settings: SettingsManager) {
         self.settings = settings
     }
@@ -100,6 +111,10 @@ final class UsageService: ObservableObject {
                 throw UsageError.invalidResponse
             }
 
+            if httpResponse.statusCode == 429 {
+                throw UsageError.rateLimited
+            }
+
             guard httpResponse.statusCode == 200 else {
                 let body = String(data: data, encoding: .utf8) ?? "No body"
                 throw UsageError.httpError(httpResponse.statusCode, body)
@@ -126,22 +141,43 @@ final class UsageService: ObservableObject {
 
     func startPolling(interval: TimeInterval = 60) {
         stopPolling()
+        pollInterval = interval
+        rateLimitBackoff = 0
 
-        // Fetch immediately
-        Task { await fetchUsage() }
-
-        // Then poll at interval
-        pollTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor in
-                await self.fetchUsage()
-            }
-        }
+        // Fetch immediately, then self-reschedule (backing off on rate limits).
+        Task { await fetchAndReschedule() }
     }
 
     func stopPolling() {
         pollTimer?.invalidate()
         pollTimer = nil
+    }
+
+    private func fetchAndReschedule() async {
+        await fetchUsage()
+        scheduleNextPoll()
+    }
+
+    private func scheduleNextPoll() {
+        let delay: TimeInterval
+        if isRateLimited {
+            // Exponential backoff, capped, so we stop feeding our own lockout.
+            rateLimitBackoff = rateLimitBackoff == 0
+                ? max(pollInterval, 60)
+                : min(rateLimitBackoff * 2, maxBackoff)
+            delay = rateLimitBackoff
+        } else {
+            rateLimitBackoff = 0
+            delay = pollInterval
+        }
+
+        pollTimer?.invalidate()
+        pollTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in
+                await self.fetchAndReschedule()
+            }
+        }
     }
 
     // MARK: - Computed Properties
@@ -172,6 +208,7 @@ enum UsageError: LocalizedError {
     case unsupportedFormat
     case tokenExpired(Date)
     case invalidResponse
+    case rateLimited
     case httpError(Int, String)
     case unexpected(String)
 
@@ -190,6 +227,7 @@ enum UsageError: LocalizedError {
         case .oauthLoginRequired: return "person.badge.key.fill"
         case .unsupportedFormat: return "doc.questionmark.fill"
         case .tokenExpired: return "clock.arrow.circlepath"
+        case .rateLimited: return "hourglass"
         default: return "exclamationmark.triangle.fill"
         }
     }
@@ -206,6 +244,8 @@ enum UsageError: LocalizedError {
             return "Session expired"
         case .invalidResponse:
             return "Invalid response from API"
+        case .rateLimited:
+            return "Rate limited"
         case .httpError(let code, _):
             return "API error (HTTP \(code))"
         case .unexpected(let msg):
@@ -223,6 +263,8 @@ enum UsageError: LocalizedError {
             return "Try running `claude login` to re-authenticate."
         case .tokenExpired:
             return "Open Claude Code to refresh your session."
+        case .rateLimited:
+            return "Too many requests. TokenCap is backing off and will retry automatically."
         case .httpError(401, _):
             return "Open Claude Code to refresh your session."
         default:
